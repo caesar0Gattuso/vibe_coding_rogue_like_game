@@ -155,7 +155,6 @@ export class GameEngine {
 
     // 1. Player Input & Stats
     const level = useGameStore.getState().level;
-    const damageMult = config.damageMultiplier + ((level - 1) * config.damagePerLevel);
     const speedMult = config.speedMultiplier + ((level - 1) * config.speedPerLevel);
 
     this.player.speed = config.playerSpeed * speedMult;

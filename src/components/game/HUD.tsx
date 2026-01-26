@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Sword, Zap, Plus } from 'lucide-react';
 import { useGameStore } from '../../store/gameStore';
 import { useConfigStore } from '../../store/configStore';
