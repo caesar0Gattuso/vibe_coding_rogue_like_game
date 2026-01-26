@@ -7,6 +7,7 @@ import { LevelUpModal } from './components/game/LevelUpModal';
 import { GameOverModal } from './components/game/GameOverModal';
 import { VirtualJoystick } from './components/game/VirtualJoystick';
 import { TutorialOverlay } from './components/game/TutorialOverlay';
+import { WaveAnnouncement } from './components/game/WaveAnnouncement';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
       <GameCanvas />
       <VirtualJoystick />
       <TutorialOverlay />
+      <WaveAnnouncement />
       <HUD />
       <LevelUpModal />
       <GameOverModal />

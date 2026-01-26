@@ -11,6 +11,12 @@ export interface GameConfig {
   isGodMode: boolean;
   gameSpeed: number; // Time scale
   magnetRadius: number; // Pickup range
+  damageMultiplier: number;
+  speedMultiplier: number;
+  damagePerLevel: number;
+  speedPerLevel: number;
+  cardDamageBoost: number;
+  cardSpeedBoost: number;
 }
 
 export interface TutorialState {
@@ -38,6 +44,12 @@ const DEFAULT_CONFIG: GameConfig = {
   isGodMode: false,
   gameSpeed: 1,
   magnetRadius: 100,
+  damageMultiplier: 1,
+  speedMultiplier: 1,
+  damagePerLevel: 0.05,
+  speedPerLevel: 0.02,
+  cardDamageBoost: 0.25,
+  cardSpeedBoost: 0.15,
 };
 
 const DEFAULT_TUTORIAL: TutorialState = {

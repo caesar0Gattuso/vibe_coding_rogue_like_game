@@ -37,6 +37,8 @@ export class GameEngine {
   private joystickInput: { x: number, y: number } = { x: 0, y: 0 };
   
   private enemySpawnTimer: number = 0;
+  private waveTimer: number = 0;
+  private readonly WAVE_DURATION: number = 60; // 60 seconds per wave
 
   private constructor() {
     this.app = new Application();
@@ -97,7 +99,20 @@ export class GameEngine {
   }
 
   private startNewGame() {
-      // Reset State
+      // Check if we should actually reset (e.g. if it's a fresh load vs a reload)
+      // For now, let's trust the persisted store state unless it's explicitly Game Over or Level 1/0 XP
+      const state = useGameStore.getState();
+      const shouldReset = state.isGameOver || (state.level === 1 && state.exp === 0 && state.wave === 1);
+
+      if (shouldReset) {
+          // Reset Store
+          useGameStore.getState().resetGame();
+          useGameStore.getState().setGameOver(false);
+          // Also reset weapon inventory? usually yes for rogue-lite runs
+          // useInventoryStore.getState().reset(); // need to implement this
+      }
+
+      // Reset Entities (Visuals need to be rebuilt regardless of state)
       this.enemies.forEach(e => e.die());
       this.bullets.forEach(b => b.die());
       this.expGems.forEach(g => g.die());
@@ -105,17 +120,15 @@ export class GameEngine {
       this.bullets = [];
       this.expGems = [];
       this.gameContainer.removeChildren();
+      this.waveTimer = 0; // Note: if we want to persist exact wave time, we need to save it in store
       
-      // Reset Store
-      useGameStore.getState().setStats({ hp: 100, score: 0, level: 1, exp: 0 });
-      useGameStore.getState().setGameOver(false);
-
       // Create Player
       const { width, height } = this.app.screen;
       this.player = new Player(width / 2, height / 2);
       this.gameContainer.addChild(this.player);
 
-      // Reset Weapons
+      // Restore Weapons from Inventory Store if not resetting
+      // TODO: properly sync WeaponManager with InventoryStore on load
       this.weaponManager.weapons = [];
       this.weaponManager.addWeapon(new MagicWand(this as any)); // Default weapon
   }
@@ -141,7 +154,11 @@ export class GameEngine {
     const config = useConfigStore.getState();
 
     // 1. Player Input & Stats
-    this.player.speed = config.playerSpeed;
+    const level = useGameStore.getState().level;
+    const damageMult = config.damageMultiplier + ((level - 1) * config.damagePerLevel);
+    const speedMult = config.speedMultiplier + ((level - 1) * config.speedPerLevel);
+
+    this.player.speed = config.playerSpeed * speedMult;
     this.player.maxHp = config.playerHealth;
     
     let dx = 0;
@@ -161,8 +178,20 @@ export class GameEngine {
     this.constrainPlayer();
 
     // 2. Enemy Spawning
+    this.waveTimer += delta / 60;
+    if (this.waveTimer >= this.WAVE_DURATION) {
+        this.waveTimer = 0;
+        const currentWave = useGameStore.getState().wave;
+        useGameStore.getState().setStats({ wave: currentWave + 1 });
+        // Optional: Heal player slightly on wave up?
+    }
+
     this.enemySpawnTimer += delta / 60; 
-    if (this.enemySpawnTimer >= config.enemySpawnRate) {
+    const currentWave = useGameStore.getState().wave;
+    // Spawn rate decreases (gets faster) as wave increases. Min cap 0.2s
+    const spawnRate = Math.max(0.2, config.enemySpawnRate - ((currentWave - 1) * 0.1));
+    
+    if (this.enemySpawnTimer >= spawnRate) {
         this.spawnEnemy();
         this.enemySpawnTimer = 0;
     }
@@ -202,6 +231,15 @@ export class GameEngine {
       }
       
       const enemy = new Enemy(x, y);
+      
+      // Scale Enemy Stats based on Wave
+      const wave = useGameStore.getState().wave;
+      // +20% HP per wave
+      enemy.maxHp = enemy.maxHp * (1 + (wave - 1) * 0.2); 
+      enemy.hp = enemy.maxHp;
+      // +5% Speed per wave (capped at some point?)
+      // Note: Enemy.speed is also overridden in updateEnemies by config, so we need to handle that there or remove the override
+      
       if (this.player) enemy.setTarget(this.player);
       this.enemies.push(enemy);
       this.gameContainer.addChild(enemy);
@@ -220,13 +258,17 @@ export class GameEngine {
   public getDamageTextManager() { return this.damageTextManager; }
   public getParticleSystem() { return this.particleSystem; }
   public getScreenShakeManager() { return this.screenShakeManager; }
+  public getWaveProgress() { return Math.min(1, this.waveTimer / this.WAVE_DURATION); }
 
   private updateEnemies(delta: number) {
       const config = useConfigStore.getState();
       
       for (let i = this.enemies.length - 1; i >= 0; i--) {
           const enemy = this.enemies[i];
-          enemy.speed = config.enemySpeed; // Live update speed
+          // enemy.speed = config.enemySpeed; // Removed override to allow per-enemy scaling if needed, or apply scaling here
+          const wave = useGameStore.getState().wave;
+          enemy.speed = config.enemySpeed * (1 + (wave - 1) * 0.05);
+
           enemy.update(delta);
           
           // Collision with Player
@@ -262,7 +304,11 @@ export class GameEngine {
                       config.completeTutorialStep('hasAttacked');
                   }
 
-                  const damage = bullet['damage'] || useConfigStore.getState().bulletDamage; 
+                  const level = useGameStore.getState().level;
+                  const damageMult = config.damageMultiplier + ((level - 1) * config.damagePerLevel);
+
+                  const baseDamage = bullet['damage'] || config.bulletDamage; 
+                  const damage = baseDamage * damageMult; 
                   
                   // Critical Hit Logic (Simple 10% chance)
                   const isCrit = Math.random() < 0.1;

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Plus } from 'lucide-react';
+import { Heart, Plus, Sword, Zap } from 'lucide-react';
 import { useGameStore } from '../../store/gameStore';
 import { GlassCard } from '../ui/GlassCard';
 import { Button } from '../ui/Button';
@@ -69,30 +69,64 @@ export const LevelUpModal: React.FC = () => {
         });
     }
 
-    // 3. Heal (Fallback)
-    const healOption = {
-        type: 'heal',
-        id: 'heal',
-        name: 'Chicken Leg',
-        desc: 'Heal 30 HP',
+    // 3. Heal (Fallback) & Stat Boosts
+    // Heal & Max HP
+    choices.push({
+        type: 'stat_health',
+        id: 'stat_health',
+        name: 'Vitality', // Renamed from Chicken Leg to sound more like an upgrade
+        desc: '+20 Max HP & Heal',
         icon: Heart,
         color: 'text-green-400'
-    };
+    });
+    
+    // Damage Boost
+    choices.push({
+        type: 'stat_damage',
+        id: 'stat_damage',
+        name: 'Might',
+        desc: `+${(config.cardDamageBoost * 100).toFixed(0)}% Base Damage`,
+        icon: Sword,
+        color: 'text-red-400'
+    });
+
+    // Speed Boost
+    choices.push({
+        type: 'stat_speed',
+        id: 'stat_speed',
+        name: 'Haste',
+        desc: `+${(config.cardSpeedBoost * 100).toFixed(0)}% Movement Speed`,
+        icon: Zap,
+        color: 'text-yellow-400'
+    });
 
     // Shuffle and pick 3
-    // If no weapons available, just show heal + gold (todo)
     let available = [...choices];
     const selected = [];
     
-    // Always try to give at least one weapon option if possible
-    for (let i = 0; i < 3; i++) {
-        if (available.length > 0) {
-            const idx = Math.floor(Math.random() * available.length);
-            selected.push(available[idx]);
-            available.splice(idx, 1);
-        } else {
-            selected.push(healOption);
-        }
+    // Logic: 
+    // - Always include at least one weapon/upgrade if possible
+    // - Fill rest with random from pool (weapons + stats)
+    
+    // Separate weapons and consumables
+    const weapons = available.filter(c => c.type === 'new' || c.type === 'upgrade');
+    const consumables = available.filter(c => c.type.startsWith('stat_'));
+    
+    // 1. Pick 1 weapon (if any)
+    if (weapons.length > 0) {
+         const idx = Math.floor(Math.random() * weapons.length);
+         selected.push(weapons[idx]);
+         weapons.splice(idx, 1);
+    }
+    
+    // 2. Mix back remaining weapons into pool
+    const pool = [...weapons, ...consumables];
+    
+    // 3. Fill remaining slots (2 slots)
+    while (selected.length < 3 && pool.length > 0) {
+        const idx = Math.floor(Math.random() * pool.length);
+        selected.push(pool[idx]);
+        pool.splice(idx, 1);
     }
 
     setOptions(selected);
@@ -107,10 +141,22 @@ export const LevelUpModal: React.FC = () => {
         const newWeapon = new option.class(game);
         game.getWeaponManager().addWeapon(newWeapon);
         inventory.addWeapon(option.id);
-    } else if (option.type === 'heal') {
-        config.updateConfig('playerHealth', config.playerHealth); // No max hp increase, just heal
+    } else if (option.type === 'stat_health') {
+        // Increase Max HP
+        const newMaxHp = config.playerHealth + 20;
+        config.updateConfig('playerHealth', newMaxHp);
+        
+        // Heal the same amount to keep percentage or just add flat? 
+        // User asked: 20/100 -> 40/120. This means we add 20 to both current and max.
         const currentHp = useGameStore.getState().hp;
-        useGameStore.getState().setStats({ hp: Math.min(config.playerHealth, currentHp + 30) });
+        useGameStore.getState().setStats({ 
+            maxHp: newMaxHp,
+            hp: currentHp + 20 
+        });
+    } else if (option.type === 'stat_damage') {
+        config.updateConfig('damageMultiplier', config.damageMultiplier + config.cardDamageBoost);
+    } else if (option.type === 'stat_speed') {
+        config.updateConfig('speedMultiplier', config.speedMultiplier + config.cardSpeedBoost);
     }
 
     setLevelUp(false);

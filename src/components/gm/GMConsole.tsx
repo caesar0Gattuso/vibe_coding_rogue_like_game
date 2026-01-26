@@ -97,6 +97,32 @@ export const GMConsole: React.FC = () => {
                     onChange={(v) => config.updateConfig('bulletSpeed', v)}
                     min={1} max={20} step={1}
                   />
+                  
+                  {/* Stats Scaling Config */}
+                   <ConfigItem 
+                    label="Level Dmg Scale" 
+                    value={config.damagePerLevel} 
+                    onChange={(v) => config.updateConfig('damagePerLevel', v)}
+                    min={0} max={0.5} step={0.01}
+                  />
+                  <ConfigItem 
+                    label="Level Spd Scale" 
+                    value={config.speedPerLevel} 
+                    onChange={(v) => config.updateConfig('speedPerLevel', v)}
+                    min={0} max={0.2} step={0.01}
+                  />
+                  <ConfigItem 
+                    label="Card Dmg Boost" 
+                    value={config.cardDamageBoost} 
+                    onChange={(v) => config.updateConfig('cardDamageBoost', v)}
+                    min={0.05} max={1} step={0.05}
+                  />
+                  <ConfigItem 
+                    label="Card Spd Boost" 
+                    value={config.cardSpeedBoost} 
+                    onChange={(v) => config.updateConfig('cardSpeedBoost', v)}
+                    min={0.05} max={0.5} step={0.05}
+                  />
                 </div>
 
                 {/* Enemies */}
