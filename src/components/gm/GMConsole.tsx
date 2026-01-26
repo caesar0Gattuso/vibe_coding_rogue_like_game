@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, X, Save, RefreshCw, Zap } from 'lucide-react';
+import { Settings, X, Save, RefreshCw, Zap, GraduationCap } from 'lucide-react';
 import { useConfigStore } from '../../store/configStore';
 import { GlassCard } from '../ui/GlassCard';
 import { Button } from '../ui/Button';
@@ -125,6 +125,31 @@ export const GMConsole: React.FC = () => {
                     min={0} max={3} step={0.1}
                   />
                 </div>
+
+                {/* Tutorial */}
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Debug</h3>
+                  <div className="flex items-center justify-between bg-white/5 p-3 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <GraduationCap size={16} className="text-blue-400"/>
+                      <span className="text-sm">Tutorial Status</span>
+                    </div>
+                    <Button 
+                      variant="secondary" 
+                      size="sm" 
+                      onClick={() => config.resetTutorial()}
+                      className="h-8 text-xs"
+                    >
+                      Reset Steps
+                    </Button>
+                  </div>
+                  <div className="text-[10px] font-mono text-white/40 px-2 grid grid-cols-3 gap-1">
+                      <span className={config.tutorial.hasMoved ? "text-green-400" : "text-red-400"}>MOV: {config.tutorial.hasMoved ? 'OK' : 'NO'}</span>
+                      <span className={config.tutorial.hasAttacked ? "text-green-400" : "text-red-400"}>ATK: {config.tutorial.hasAttacked ? 'OK' : 'NO'}</span>
+                      <span className={config.tutorial.hasCollectedGem ? "text-green-400" : "text-red-400"}>GEM: {config.tutorial.hasCollectedGem ? 'OK' : 'NO'}</span>
+                  </div>
+                </div>
+
               </div>
 
               <div className="p-4 border-t border-white/10 flex gap-2">

@@ -11,7 +11,7 @@ export const HUD: React.FC = () => {
   const { weapons } = useInventoryStore();
   
   // Access game instance to get weapon details/levels
-  const game = GameEngine.getInstance(); // This might be risky if React renders before Game init, but usually safe after mount
+  const game = GameEngine.getInstance();
   const weaponManager = game.getWeaponManager ? game.getWeaponManager() : null;
 
   const hpPercent = Math.max(0, (hp / maxHp) * 100);
@@ -21,73 +21,84 @@ export const HUD: React.FC = () => {
   const weaponSlots = [0, 1, 2, 3];
 
   return (
-    <div className="absolute inset-x-0 top-0 p-4 pt-safe pointer-events-none flex flex-col gap-2 h-full pb-safe">
-      {/* Top Bar */}
-      <div className="flex justify-between items-start">
-        <div className="flex flex-col gap-1">
-          <div className="text-xl font-bold">Wave {wave}</div>
-          <div className="text-sm text-white/50">Level {level}</div>
+    <div className="absolute inset-x-0 top-0 p-4 pt-safe pointer-events-none flex flex-col gap-3 h-full pb-safe">
+      
+      {/* Top Status Bar: Level + Bars + Wave */}
+      <div className="flex items-center gap-3 w-full">
+        {/* Level Badge */}
+        <div className="flex-shrink-0 flex flex-col items-center justify-center bg-black/40 w-12 h-12 rounded-lg border border-white/20 backdrop-blur-md shadow-lg">
+            <span className="text-[10px] text-white/60 uppercase font-bold">Lv</span>
+            <span className="text-xl font-bold leading-none text-yellow-400">{level}</span>
         </div>
-        
-        {/* HP Bar */}
-        <div className="w-48 bg-black/40 h-4 rounded-full overflow-hidden border border-white/10 relative">
-            <div 
-                className="h-full bg-red-500 transition-all duration-300" 
-                style={{ width: `${hpPercent}%` }}
-            />
-            <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold">
-                {Math.ceil(hp)} / {maxHp}
+
+        {/* Bars Container (Center) */}
+        <div className="flex-1 flex flex-col gap-1.5 min-w-0">
+            {/* HP Bar */}
+            <div className="w-full h-5 bg-black/60 rounded-full overflow-hidden border border-white/20 relative backdrop-blur-sm">
+                <div 
+                    className="h-full bg-red-500 transition-all duration-300" 
+                    style={{ width: `${hpPercent}%` }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-white drop-shadow-md">
+                    {Math.ceil(hp)} / {maxHp}
+                </div>
+            </div>
+            
+            {/* EXP Bar */}
+            <div className="w-full h-2 bg-black/60 rounded-full overflow-hidden border border-white/10 relative backdrop-blur-sm">
+                 <div 
+                    className="h-full bg-blue-500 transition-all duration-300" 
+                    style={{ width: `${expPercent}%` }}
+                />
             </div>
         </div>
-      </div>
 
-      {/* Stats Row */}
-      <div className="flex gap-4 text-xs font-bold text-white/80">
-        <div className="flex items-center gap-1 bg-black/30 px-2 py-1 rounded-lg backdrop-blur-sm border border-white/5">
-          <Sword size={12} className="text-red-400" />
-          <span>{bulletDamage}</span>
-        </div>
-        <div className="flex items-center gap-1 bg-black/30 px-2 py-1 rounded-lg backdrop-blur-sm border border-white/5">
-          <Zap size={12} className="text-yellow-400" />
-          <span>{playerSpeed.toFixed(1)}</span>
+        {/* Wave Info (Right) */}
+        <div className="flex-shrink-0 flex flex-col items-end pl-1">
+             <div className="text-lg font-bold text-white drop-shadow-md">Wave {wave}</div>
+             <div className="text-[10px] text-white/50 font-mono">{Math.floor(exp)} XP</div>
         </div>
       </div>
 
-      {/* Weapon Slots (Top Right or Center, let's put under stats for now) */}
-      <div className="flex gap-2 mt-2">
-        {weaponSlots.map(index => {
-            const weaponId = weapons[index];
-            const weapon = weaponId && weaponManager ? weaponManager.getWeapon(weaponId) : null;
-            
-            return (
-                <div key={index} className="w-10 h-10 bg-black/40 border border-white/20 rounded-lg flex items-center justify-center relative">
-                    {weapon ? (
-                        <>
-                           {weapon.icon && <weapon.icon size={20} className="text-white" />}
-                           <div className="absolute bottom-0 right-0 bg-black/60 text-[8px] px-1 rounded-tl">
-                               Lv.{weapon.level}
-                           </div>
-                        </>
-                    ) : (
-                        <div className="text-white/10"><Plus size={16} /></div>
-                    )}
-                </div>
-            );
-        })}
+      {/* Stats & Weapons Row */}
+      <div className="flex justify-between items-start">
+        {/* Stats */}
+        <div className="flex gap-2">
+            <div className="flex items-center gap-1 bg-black/30 px-2 py-1 rounded-lg backdrop-blur-sm border border-white/5 text-xs font-bold text-white/90">
+                <Sword size={12} className="text-red-400" />
+                <span>{bulletDamage}</span>
+            </div>
+            <div className="flex items-center gap-1 bg-black/30 px-2 py-1 rounded-lg backdrop-blur-sm border border-white/5 text-xs font-bold text-white/90">
+                <Zap size={12} className="text-yellow-400" />
+                <span>{playerSpeed.toFixed(1)}</span>
+            </div>
+        </div>
+
+        {/* Weapon Slots */}
+        <div className="flex gap-1.5">
+            {weaponSlots.map(index => {
+                const weaponId = weapons[index];
+                const weapon = weaponId && weaponManager ? weaponManager.getWeapon(weaponId) : null;
+                
+                return (
+                    <div key={index} className="w-8 h-8 bg-black/40 border border-white/20 rounded-md flex items-center justify-center relative backdrop-blur-sm">
+                        {weapon ? (
+                            <>
+                               {weapon.icon && <weapon.icon size={16} className="text-white" />}
+                               <div className="absolute -bottom-1 -right-1 bg-black/80 text-[8px] px-1 rounded border border-white/10 text-white font-bold scale-90">
+                                   {weapon.level}
+                               </div>
+                            </>
+                        ) : (
+                            <div className="text-white/10"><Plus size={12} /></div>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
       </div>
 
-      {/* Bottom Bar: EXP */}
-      <div className="mt-auto w-full">
-        <div className="w-full bg-black/40 h-2 rounded-full overflow-hidden border border-white/10">
-            <div 
-                className="h-full bg-blue-500 transition-all duration-300" 
-                style={{ width: `${expPercent}%` }}
-            />
-        </div>
-        <div className="text-center text-xs text-white/40 mt-1">
-            {Math.floor(exp)} / {maxExp} XP
-        </div>
-      </div>
+      {/* Bottom Area is now clear for controls */}
     </div>
   );
 };

@@ -3,6 +3,7 @@ import { Player } from '../entities/Player';
 import { Enemy } from '../entities/Enemy';
 import { Bullet } from '../entities/Bullet';
 import { Entity } from '../entities/Entity';
+import { ExpGem } from '../entities/ExpGem';
 import { useConfigStore } from '../../store/configStore';
 import { useGameStore } from '../../store/gameStore';
 import { WeaponManager } from '../weapons/WeaponManager';
@@ -24,6 +25,7 @@ export class GameEngine {
   private player: Player | null = null;
   private enemies: Enemy[] = [];
   private bullets: Bullet[] = [];
+  private expGems: ExpGem[] = [];
   
   private weaponManager: WeaponManager;
   private damageTextManager: DamageTextManager;
@@ -98,8 +100,10 @@ export class GameEngine {
       // Reset State
       this.enemies.forEach(e => e.die());
       this.bullets.forEach(b => b.die());
+      this.expGems.forEach(g => g.die());
       this.enemies = [];
       this.bullets = [];
+      this.expGems = [];
       this.gameContainer.removeChildren();
       
       // Reset Store
@@ -169,6 +173,7 @@ export class GameEngine {
     // 4. Update Entities & Collision
     this.updateEnemies(delta);
     this.updateBullets(delta);
+    this.updateExpGems(delta);
     
     // 5. Effects
     this.damageTextManager.update(delta);
@@ -205,6 +210,7 @@ export class GameEngine {
   public getPlayer() { return this.player; }
   public getEnemies() { return this.enemies; }
   public getWeaponManager() { return this.weaponManager; }
+  public getExpGems() { return this.expGems; }
   
   public addBullet(bullet: Bullet) {
       this.bullets.push(bullet);
@@ -251,6 +257,11 @@ export class GameEngine {
           
           for (const enemy of this.enemies) {
               if (enemy.active && this.checkCollision(bullet, enemy)) {
+                  const config = useConfigStore.getState();
+                  if (!config.tutorial.hasAttacked) {
+                      config.completeTutorialStep('hasAttacked');
+                  }
+
                   const damage = bullet['damage'] || useConfigStore.getState().bulletDamage; 
                   
                   // Critical Hit Logic (Simple 10% chance)
@@ -265,7 +276,8 @@ export class GameEngine {
                   }
                   
                   if (!enemy.active) {
-                      useGameStore.getState().addExp(20);
+                      // useGameStore.getState().addExp(20); // Old instant exp
+                      this.spawnExpGem(enemy.x, enemy.y, 20);
                       this.particleSystem.emitExplosion(enemy.x, enemy.y, 0xef4444); // Red explosion
                   }
                   bullet.die();
@@ -292,5 +304,33 @@ export class GameEngine {
       }
       this.isInitialized = false;
       GameEngine.instance = null as any;
+  }
+
+  private spawnExpGem(x: number, y: number, value: number) {
+      const gem = new ExpGem(x, y, value);
+      this.expGems.push(gem);
+      this.gameContainer.addChildAt(gem, 0); // Render gems below enemies/player
+  }
+
+  private updateExpGems(delta: number) {
+      if (!this.player) return;
+      const config = useConfigStore.getState();
+
+      for (let i = this.expGems.length - 1; i >= 0; i--) {
+          const gem = this.expGems[i];
+          gem.update(delta, this.player, config.magnetRadius);
+
+          // Check pickup
+          if (this.checkCollision(gem, this.player)) {
+              if (!config.tutorial.hasCollectedGem) {
+                  useConfigStore.getState().completeTutorialStep('hasCollectedGem');
+              }
+              
+              useGameStore.getState().addExp(gem.value);
+              // Optional: Add pickup sound or tiny sparkle
+              gem.die();
+              this.expGems.splice(i, 1);
+          }
+      }
   }
 }

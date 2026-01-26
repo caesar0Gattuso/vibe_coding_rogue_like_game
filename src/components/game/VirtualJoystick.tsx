@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine } from '../../game/core/GameEngine';
+import { useConfigStore } from '../../store/configStore';
 
 interface VirtualJoystickProps {
   onJoystickMove?: (x: number, y: number) => void;
@@ -20,9 +21,11 @@ export const VirtualJoystick: React.FC<VirtualJoystickProps> = () => {
     if (!container) return;
 
     const handleTouchStart = (e: TouchEvent) => {
-      // Only handle touches on the left half of the screen for movement
+      // Handle touches anywhere on the screen
       const touch = e.touches[0];
-      if (touch.clientX > window.innerWidth / 2) return;
+      
+      // Prevent multi-touch from resetting the joystick if already active
+      if (active) return;
 
       e.preventDefault(); // Prevent scrolling
       
@@ -59,6 +62,11 @@ export const VirtualJoystick: React.FC<VirtualJoystickProps> = () => {
 
       // Update Game Instance directly
       GameEngine.getInstance().setJoystickInput(normalizedX, normalizedY);
+      
+      const { tutorial, completeTutorialStep } = useConfigStore.getState();
+      if (!tutorial.hasMoved && (Math.abs(normalizedX) > 0.1 || Math.abs(normalizedY) > 0.1)) {
+          completeTutorialStep('hasMoved');
+      }
     };
 
     const handleTouchEnd = (e: TouchEvent) => {

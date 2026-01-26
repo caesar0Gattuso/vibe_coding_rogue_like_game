@@ -6,12 +6,14 @@ import { HUD } from './components/game/HUD';
 import { LevelUpModal } from './components/game/LevelUpModal';
 import { GameOverModal } from './components/game/GameOverModal';
 import { VirtualJoystick } from './components/game/VirtualJoystick';
+import { TutorialOverlay } from './components/game/TutorialOverlay';
 
 function App() {
   return (
     <Layout>
       <GameCanvas />
       <VirtualJoystick />
+      <TutorialOverlay />
       <HUD />
       <LevelUpModal />
       <GameOverModal />
