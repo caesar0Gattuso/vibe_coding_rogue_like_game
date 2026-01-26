@@ -2,11 +2,12 @@ import { Weapon } from './Weapon';
 import type { GameEngine } from '../core/GameEngine';
 
 export class WeaponManager {
-  // private game: GameEngine;
+// @ts-ignore
+// private game: GameEngine;
   public weapons: Weapon[] = [];
   public maxWeapons: number = 4;
 
-  constructor(game: GameEngine) {
+  constructor(_game: GameEngine) {
     // this.game = game;
   }
 

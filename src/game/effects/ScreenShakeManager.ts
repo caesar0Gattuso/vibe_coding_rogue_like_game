@@ -4,7 +4,8 @@ export class ScreenShakeManager {
   private container: Container;
   private shakeTimer: number = 0;
   private shakeIntensity: number = 0;
-  // private originalPos: { x: number, y: number } = { x: 0, y: 0 };
+// @ts-ignore
+// private originalPos: { x: number, y: number } = { x: 0, y: 0 };
 
   constructor(container: Container) {
     this.container = container;

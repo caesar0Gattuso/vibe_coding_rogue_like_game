@@ -15,7 +15,8 @@ import { ScreenShakeManager } from '../effects/ScreenShakeManager';
 export class GameEngine {
   private static instance: GameEngine;
   public app: Application;
-  // private container: HTMLElement | null = null;
+// @ts-ignore
+// private container: HTMLElement | null = null;
   private isInitialized = false;
 
   private gameContainer: Container;
