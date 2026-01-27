@@ -1,11 +1,12 @@
 import { Entity } from './Entity';
 import { Player } from './Player';
 
-export enum EnemyType {
-  CHASER = 'chaser',
-  RUSHER = 'rusher',
-  TANK = 'tank',
-}
+export type EnemyType = 'chaser' | 'rusher' | 'tank';
+export const EnemyType = {
+  CHASER: 'chaser' as EnemyType,
+  RUSHER: 'rusher' as EnemyType,
+  TANK: 'tank' as EnemyType,
+};
 
 export class Enemy extends Entity {
   public type: EnemyType;

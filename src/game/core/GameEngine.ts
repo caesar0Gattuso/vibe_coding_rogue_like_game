@@ -284,7 +284,7 @@ export class GameEngine {
       for (let i = this.enemies.length - 1; i >= 0; i--) {
           const enemy = this.enemies[i];
           // enemy.speed = config.enemySpeed; // Removed override to allow per-enemy scaling if needed, or apply scaling here
-          const wave = useGameStore.getState().wave;
+          // const wave = useGameStore.getState().wave;
           // Apply wave scaling to BASE speed, not overwriting specific type speed
           // We need a way to store base speed or just apply multiplier to current speed?
           // If we multiply current speed, it will compound every frame! ERROR.
@@ -302,7 +302,7 @@ export class GameEngine {
           // Let's assume config.enemySpeed is a multiplier (default 1).
           // And wave scaling is another multiplier.
           
-          const globalSpeedMult = config.enemySpeed * (1 + (wave - 1) * 0.05);
+          // const globalSpeedMult = config.enemySpeed * (1 + (wave - 1) * 0.05);
           
           // We need to pass this to enemy update, or set it on enemy
           // enemy.speedMultiplier = globalSpeedMult; // We need to add this property to Enemy or just hack it
