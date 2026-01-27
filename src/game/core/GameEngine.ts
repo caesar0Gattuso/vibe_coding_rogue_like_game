@@ -1,6 +1,6 @@
 import { Application, Container } from 'pixi.js';
 import { Player } from '../entities/Player';
-import { Enemy } from '../entities/Enemy';
+import { Enemy, EnemyType } from '../entities/Enemy';
 import { Bullet } from '../entities/Bullet';
 import { Entity } from '../entities/Entity';
 import { ExpGem } from '../entities/ExpGem';
@@ -182,7 +182,8 @@ export class GameEngine {
         this.waveTimer = 0;
         const currentWave = useGameStore.getState().wave;
         useGameStore.getState().setStats({ wave: currentWave + 1 });
-        // Optional: Heal player slightly on wave up?
+        // Wave Complete Bonus
+        useGameStore.getState().addScore(currentWave * 100);
     }
 
     this.enemySpawnTimer += delta / 60; 
@@ -228,16 +229,34 @@ export class GameEngine {
           x = Math.random() * width;
           y = Math.random() < 0.5 ? -20 : height + 20;
       }
+      // Determine Enemy Type based on Wave
+      const wave = useGameStore.getState().wave;
+      let type = EnemyType.CHASER;
       
-      const enemy = new Enemy(x, y);
+      const rand = Math.random();
+      
+      if (wave >= 5) {
+          // Wave 5+: Chaser (60%), Rusher (20%), Tank (20%)
+          if (rand < 0.6) type = EnemyType.CHASER;
+          else if (rand < 0.8) type = EnemyType.RUSHER;
+          else type = EnemyType.TANK;
+      } else if (wave >= 3) {
+          // Wave 3-4: Chaser (80%), Rusher (20%)
+          if (rand < 0.8) type = EnemyType.CHASER;
+          else type = EnemyType.RUSHER;
+      }
+      // Wave 1-2: 100% Chaser
+
+      const enemy = new Enemy(x, y, type);
       
       // Scale Enemy Stats based on Wave
-      const wave = useGameStore.getState().wave;
+      // const wave = useGameStore.getState().wave; // Already have wave above
       // +20% HP per wave
       enemy.maxHp = enemy.maxHp * (1 + (wave - 1) * 0.2); 
       enemy.hp = enemy.maxHp;
-      // +5% Speed per wave (capped at some point?)
-      // Note: Enemy.speed is also overridden in updateEnemies by config, so we need to handle that there or remove the override
+      // +5% Speed per wave (Applied to base speed)
+      const config = useConfigStore.getState();
+      enemy.speed = enemy.speed * (1 + (wave - 1) * 0.05) * config.enemySpeed; 
       
       if (this.player) enemy.setTarget(this.player);
       this.enemies.push(enemy);
@@ -266,8 +285,48 @@ export class GameEngine {
           const enemy = this.enemies[i];
           // enemy.speed = config.enemySpeed; // Removed override to allow per-enemy scaling if needed, or apply scaling here
           const wave = useGameStore.getState().wave;
-          enemy.speed = config.enemySpeed * (1 + (wave - 1) * 0.05);
-
+          // Apply wave scaling to BASE speed, not overwriting specific type speed
+          // We need a way to store base speed or just apply multiplier to current speed?
+          // If we multiply current speed, it will compound every frame! ERROR.
+          // Correct way: Enemy has baseSpeed. Update sets speed = baseSpeed * multiplier.
+          // But Enemy.ts constructor sets 'this.speed'.
+          // Let's assume 'this.speed' in Enemy is the base speed for that type.
+          
+          // Actually, in update() of Enemy, it uses this.speed.
+          // If we want dynamic config speed + wave scaling, we should do it carefully.
+          // For now, let's trust the Enemy class to handle its own speed logic or just apply a global modifier here
+          // BUT, we have different types with different speeds.
+          // Chaser = 1.5, Rusher = 1.0 (burst), Tank = 0.8
+          
+          // If we want to support the "Enemy Speed" config from GM console, it should be a multiplier, not an override.
+          // Let's assume config.enemySpeed is a multiplier (default 1).
+          // And wave scaling is another multiplier.
+          
+          const globalSpeedMult = config.enemySpeed * (1 + (wave - 1) * 0.05);
+          
+          // We need to pass this to enemy update, or set it on enemy
+          // enemy.speedMultiplier = globalSpeedMult; // We need to add this property to Enemy or just hack it
+          
+          // Hack: we don't want to change 'speed' property permanently if it's used for logic
+          // Let's just pass delta * multiplier to update?
+          // Or better: Let Enemy class handle its speed.
+          // For now, let's NOT override speed here, because Rusher changes its speed dynamically.
+          // If we override 'enemy.speed' here, we break Rusher's burst logic.
+          
+          // SOLUTION: We need to update Enemy to accept a global speed multiplier
+          // For this MVP, let's just let them be their natural speeds + wave scaling on spawn.
+          // The GM Console "Enemy Speed" will only affect NEWLY spawned enemies if we use it in constructor, 
+          // or we need a 'timeScale' on enemy.
+          
+          // Let's skip the per-frame speed override for now to fix Rusher behavior.
+          // The wave scaling is already applied to 'maxHp' on spawn.
+          // Let's apply speed scaling on spawn too? 
+          // The previous code was overriding it every frame:
+          // enemy.speed = config.enemySpeed * ...
+          
+          // Let's remove this override to let Rusher work.
+          // If we want global speed up, we should do it in Enemy.update()
+          
           enemy.update(delta);
           
           // Collision with Player
@@ -321,6 +380,12 @@ export class GameEngine {
                   }
                   
                   if (!enemy.active) {
+                      // Score Reward
+                      let score = 10; // Default Chaser
+                      if (enemy.type === EnemyType.RUSHER) score = 20;
+                      if (enemy.type === EnemyType.TANK) score = 50;
+                      useGameStore.getState().addScore(score);
+
                       // useGameStore.getState().addExp(20); // Old instant exp
                       this.spawnExpGem(enemy.x, enemy.y, 20);
                       this.particleSystem.emitExplosion(enemy.x, enemy.y, 0xef4444); // Red explosion

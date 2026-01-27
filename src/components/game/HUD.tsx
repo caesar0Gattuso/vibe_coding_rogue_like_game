@@ -1,12 +1,12 @@
 import React, { useEffect, useRef } from 'react';
-import { Sword, Zap, Plus } from 'lucide-react';
+import { Sword, Zap, Plus, Trophy } from 'lucide-react';
 import { useGameStore } from '../../store/gameStore';
 import { useConfigStore } from '../../store/configStore';
 import { useInventoryStore } from '../../store/inventoryStore';
 import { GameEngine } from '../../game/core/GameEngine';
 
 export const HUD: React.FC = () => {
-  const { hp, maxHp, exp, maxExp, level, wave } = useGameStore();
+  const { hp, maxHp, exp, maxExp, level, wave, score } = useGameStore();
   const { bulletDamage, playerSpeed, damageMultiplier, speedMultiplier, damagePerLevel, speedPerLevel } = useConfigStore();
   const { weapons } = useInventoryStore();
   
@@ -87,28 +87,37 @@ export const HUD: React.FC = () => {
              </div>
         </div>
 
-        {/* Wave Badge (Timer) */}
-        <div className="flex-shrink-0 relative w-12 h-12 bg-black/40 rounded-lg backdrop-blur-md shadow-lg border border-white/20 flex flex-col items-center justify-center overflow-hidden">
-             {/* SVG Timer Ring */}
-             <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox="0 0 40 40">
-                {/* Background Ring */}
-                <circle cx="20" cy="20" r="18" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3" />
-                {/* Progress Ring */}
-                <circle 
-                    ref={circleRef}
-                    cx="20" cy="20" r="18" 
-                    fill="none" 
-                    stroke="#ef4444" 
-                    strokeWidth="3"
-                    strokeDasharray="113.1"
-                    strokeDashoffset="0"
-                    strokeLinecap="round"
-                    className="transition-[stroke-dashoffset] duration-200 linear"
-                />
-             </svg>
+        {/* Right Side: Score & Wave */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+            {/* Score Capsule */}
+            <div className="bg-black/60 rounded-full border border-white/10 px-3 py-1 flex items-center gap-2 backdrop-blur-md h-8">
+                <Trophy size={14} className="text-yellow-400" />
+                <span className="text-sm font-bold text-white font-mono">{score.toLocaleString()}</span>
+            </div>
 
-             <span className="text-[8px] text-white/60 uppercase font-bold z-10">Wave</span>
-             <span className="text-xl font-bold leading-none text-red-400 z-10">{wave}</span>
+            {/* Wave Badge (Timer) */}
+            <div className="relative w-12 h-12 bg-black/40 rounded-lg backdrop-blur-md shadow-lg border border-white/20 flex flex-col items-center justify-center overflow-hidden">
+                 {/* SVG Timer Ring */}
+                 <svg className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none" viewBox="0 0 40 40">
+                    {/* Background Ring */}
+                    <circle cx="20" cy="20" r="18" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="3" />
+                    {/* Progress Ring */}
+                    <circle 
+                        ref={circleRef}
+                        cx="20" cy="20" r="18" 
+                        fill="none" 
+                        stroke="#ef4444" 
+                        strokeWidth="3"
+                        strokeDasharray="113.1"
+                        strokeDashoffset="0"
+                        strokeLinecap="round"
+                        className="transition-[stroke-dashoffset] duration-200 linear"
+                    />
+                 </svg>
+    
+                 <span className="text-[8px] text-white/60 uppercase font-bold z-10">Wave</span>
+                 <span className="text-xl font-bold leading-none text-red-400 z-10">{wave}</span>
+            </div>
         </div>
       </div>
 
