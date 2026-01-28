@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-export enum GameMode {
-  TOP_DOWN = 'TOP_DOWN',
-  PLATFORMER = 'PLATFORMER',
-}
+export const GameMode = {
+  TOP_DOWN: 'TOP_DOWN',
+  PLATFORMER: 'PLATFORMER',
+} as const;
+
+export type GameMode = typeof GameMode[keyof typeof GameMode];
 
 interface PlayerProgress {
   hp: number;

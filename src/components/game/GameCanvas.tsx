@@ -1,10 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { GameEngine } from '../../game/core/GameEngine';
-import { useGameStore } from '../../store/gameStore';
 
 export const GameCanvas: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const isGameOver = useGameStore(state => state.isGameOver);
 
   useEffect(() => {
     if (!containerRef.current) return;
