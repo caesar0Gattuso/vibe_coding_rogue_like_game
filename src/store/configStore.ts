@@ -17,6 +17,7 @@ export interface GameConfig {
   speedPerLevel: number;
   cardDamageBoost: number;
   cardSpeedBoost: number;
+  uiVersion: 'v1' | 'v2'; // New UI Version setting
 }
 
 export interface TutorialState {
@@ -29,7 +30,7 @@ interface ConfigStore extends GameConfig {
   tutorial: TutorialState;
   completeTutorialStep: (step: keyof TutorialState) => void;
   resetTutorial: () => void;
-  updateConfig: (key: keyof GameConfig, value: number | boolean) => void;
+  updateConfig: (key: keyof GameConfig, value: number | boolean | string) => void;
   resetConfig: () => void;
   exportConfig: () => string;
 }
@@ -50,6 +51,7 @@ const DEFAULT_CONFIG: GameConfig = {
   speedPerLevel: 0.02,
   cardDamageBoost: 0.25,
   cardSpeedBoost: 0.15,
+  uiVersion: 'v2', // Default to Modern UI
 };
 
 const DEFAULT_TUTORIAL: TutorialState = {

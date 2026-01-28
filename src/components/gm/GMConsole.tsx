@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings, X, Save, RefreshCw, Zap, GraduationCap } from 'lucide-react';
+import { Settings, X, Save, RefreshCw, Zap, GraduationCap, LayoutTemplate } from 'lucide-react';
 import { useConfigStore } from '../../store/configStore';
 import { GlassCard } from '../ui/GlassCard';
 import { Button } from '../ui/Button';
@@ -56,124 +56,156 @@ export const GMConsole: React.FC = () => {
               </div>
 
               <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                
+                {/* System Settings (UI Layout) */}
+                <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">System</h3>
+                    
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-white/80">
+                            <LayoutTemplate size={16} className="text-blue-400" />
+                            <span>HUD Layout</span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 bg-black/20 p-1 rounded-xl">
+                            <button
+                                onClick={() => config.updateConfig('uiVersion', 'v1')}
+                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                    config.uiVersion === 'v1' 
+                                    ? 'bg-blue-500 text-white shadow-md' 
+                                    : 'text-white/40 hover:text-white hover:bg-white/5'
+                                }`}
+                            >
+                                V1 (Classic)
+                            </button>
+                            <button
+                                onClick={() => config.updateConfig('uiVersion', 'v2')}
+                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                                    config.uiVersion === 'v2' 
+                                    ? 'bg-blue-500 text-white shadow-md' 
+                                    : 'text-white/40 hover:text-white hover:bg-white/5'
+                                }`}
+                            >
+                                V2 (Modern)
+                            </button>
+                        </div>
+                    </div>
+
+                    <ConfigItem 
+                        label="Game Speed" 
+                        value={config.gameSpeed} 
+                        onChange={(v) => config.updateConfig('gameSpeed', v)}
+                        min={0} max={3} step={0.1}
+                    />
+                </div>
+
                 {/* Player Stats */}
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Player</h3>
-                  <ConfigItem 
+                <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Player</h3>
+                <ConfigItem 
                     label="Speed" 
                     value={config.playerSpeed} 
                     onChange={(v) => config.updateConfig('playerSpeed', v)}
                     min={1} max={10} step={0.5}
-                  />
-                  <ConfigItem 
+                />
+                <ConfigItem 
                     label="Max Health" 
                     value={config.playerHealth} 
                     onChange={(v) => config.updateConfig('playerHealth', v)}
                     min={10} max={1000} step={10}
-                  />
-                  <div className="flex items-center justify-between">
+                />
+                <div className="flex items-center justify-between">
                     <span className="text-sm">God Mode</span>
                     <input 
-                      type="checkbox" 
-                      checked={config.isGodMode}
-                      onChange={(e) => config.updateConfig('isGodMode', e.target.checked)}
-                      className="w-5 h-5 accent-blue-500"
+                    type="checkbox" 
+                    checked={config.isGodMode}
+                    onChange={(e) => config.updateConfig('isGodMode', e.target.checked)}
+                    className="w-5 h-5 accent-blue-500"
                     />
-                  </div>
+                </div>
                 </div>
 
                 {/* Combat */}
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Combat</h3>
-                  <ConfigItem 
+                <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Combat</h3>
+                <ConfigItem 
                     label="Bullet Dmg" 
                     value={config.bulletDamage} 
                     onChange={(v) => config.updateConfig('bulletDamage', v)}
                     min={1} max={100} step={1}
-                  />
-                  <ConfigItem 
+                />
+                <ConfigItem 
                     label="Bullet Speed" 
                     value={config.bulletSpeed} 
                     onChange={(v) => config.updateConfig('bulletSpeed', v)}
                     min={1} max={20} step={1}
-                  />
-                  
-                  {/* Stats Scaling Config */}
-                   <ConfigItem 
+                />
+                
+                {/* Stats Scaling Config */}
+                <ConfigItem 
                     label="Level Dmg Scale" 
                     value={config.damagePerLevel} 
                     onChange={(v) => config.updateConfig('damagePerLevel', v)}
                     min={0} max={0.5} step={0.01}
-                  />
-                  <ConfigItem 
+                />
+                <ConfigItem 
                     label="Level Spd Scale" 
                     value={config.speedPerLevel} 
                     onChange={(v) => config.updateConfig('speedPerLevel', v)}
                     min={0} max={0.2} step={0.01}
-                  />
-                  <ConfigItem 
+                />
+                <ConfigItem 
                     label="Card Dmg Boost" 
                     value={config.cardDamageBoost} 
                     onChange={(v) => config.updateConfig('cardDamageBoost', v)}
                     min={0.05} max={1} step={0.05}
-                  />
-                  <ConfigItem 
+                />
+                <ConfigItem 
                     label="Card Spd Boost" 
                     value={config.cardSpeedBoost} 
                     onChange={(v) => config.updateConfig('cardSpeedBoost', v)}
                     min={0.05} max={0.5} step={0.05}
-                  />
+                />
                 </div>
 
                 {/* Enemies */}
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Enemies</h3>
-                  <ConfigItem 
+                <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Enemies</h3>
+                <ConfigItem 
                     label="Spawn Rate (s)" 
                     value={config.enemySpawnRate} 
                     onChange={(v) => config.updateConfig('enemySpawnRate', v)}
                     min={0.1} max={5} step={0.1}
-                  />
-                  <ConfigItem 
+                />
+                <ConfigItem 
                     label="Move Speed" 
                     value={config.enemySpeed} 
                     onChange={(v) => config.updateConfig('enemySpeed', v)}
                     min={0.1} max={5} step={0.1}
-                  />
-                </div>
-                 {/* Game Speed */}
-                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">System</h3>
-                  <ConfigItem 
-                    label="Game Speed" 
-                    value={config.gameSpeed} 
-                    onChange={(v) => config.updateConfig('gameSpeed', v)}
-                    min={0} max={3} step={0.1}
-                  />
+                />
                 </div>
 
                 {/* Tutorial */}
                 <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Debug</h3>
-                  <div className="flex items-center justify-between bg-white/5 p-3 rounded-lg">
+                <h3 className="text-sm font-semibold text-white/60 uppercase tracking-wider">Debug</h3>
+                <div className="flex items-center justify-between bg-white/5 p-3 rounded-lg">
                     <div className="flex items-center gap-2">
-                      <GraduationCap size={16} className="text-blue-400"/>
-                      <span className="text-sm">Tutorial Status</span>
+                    <GraduationCap size={16} className="text-blue-400"/>
+                    <span className="text-sm">Tutorial Status</span>
                     </div>
                     <Button 
-                      variant="secondary" 
-                      size="sm" 
-                      onClick={() => config.resetTutorial()}
-                      className="h-8 text-xs"
+                    variant="secondary" 
+                    size="sm" 
+                    onClick={() => config.resetTutorial()}
+                    className="h-8 text-xs"
                     >
-                      Reset Steps
+                    Reset Steps
                     </Button>
-                  </div>
-                  <div className="text-[10px] font-mono text-white/40 px-2 grid grid-cols-3 gap-1">
-                      <span className={config.tutorial.hasMoved ? "text-green-400" : "text-red-400"}>MOV: {config.tutorial.hasMoved ? 'OK' : 'NO'}</span>
-                      <span className={config.tutorial.hasAttacked ? "text-green-400" : "text-red-400"}>ATK: {config.tutorial.hasAttacked ? 'OK' : 'NO'}</span>
-                      <span className={config.tutorial.hasCollectedGem ? "text-green-400" : "text-red-400"}>GEM: {config.tutorial.hasCollectedGem ? 'OK' : 'NO'}</span>
-                  </div>
+                </div>
+                <div className="text-[10px] font-mono text-white/40 px-2 grid grid-cols-3 gap-1">
+                    <span className={config.tutorial.hasMoved ? "text-green-400" : "text-red-400"}>MOV: {config.tutorial.hasMoved ? 'OK' : 'NO'}</span>
+                    <span className={config.tutorial.hasAttacked ? "text-green-400" : "text-red-400"}>ATK: {config.tutorial.hasAttacked ? 'OK' : 'NO'}</span>
+                    <span className={config.tutorial.hasCollectedGem ? "text-green-400" : "text-red-400"}>GEM: {config.tutorial.hasCollectedGem ? 'OK' : 'NO'}</span>
+                </div>
                 </div>
 
               </div>

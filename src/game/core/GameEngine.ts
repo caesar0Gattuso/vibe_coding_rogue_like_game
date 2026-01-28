@@ -5,13 +5,12 @@ import { Bullet } from '../entities/Bullet';
 import { Entity } from '../entities/Entity';
 import { ExpGem } from '../entities/ExpGem';
 import { useConfigStore } from '../../store/configStore';
-import { useGameStore } from '../../store/gameStore';
+import { useGameStore, GameMode } from '../../store/gameStore';
 import { WeaponManager } from '../weapons/WeaponManager';
 import { MagicWand } from '../weapons/MagicWand';
 import { DamageTextManager } from '../effects/DamageTextManager';
 import { ParticleSystem } from '../effects/ParticleSystem';
 import { ScreenShakeManager } from '../effects/ScreenShakeManager';
-// import { useInventoryStore } from '../../store/inventoryStore';
 
 export class GameEngine {
   private static instance: GameEngine;
@@ -40,6 +39,10 @@ export class GameEngine {
   private waveTimer: number = 0;
   private readonly WAVE_DURATION: number = 60; // 60 seconds per wave
 
+  // Physics Config
+  private readonly GRAVITY = 0.5;
+  private readonly GROUND_Y_OFFSET = 50;
+
   private constructor() {
     this.app = new Application();
     this.gameContainer = new Container();
@@ -63,6 +66,10 @@ export class GameEngine {
         container.appendChild(this.app.canvas);
       }
       this.app.renderer.resize(container.clientWidth, container.clientHeight);
+      
+      // Force restart if re-initializing to ensure clean state for potential mode switch
+      this.restart();
+      
       return;
     }
     
@@ -97,10 +104,23 @@ export class GameEngine {
   public setJoystickInput(x: number, y: number) {
       this.joystickInput = { x, y };
   }
+  
+  public restart() {
+      // Clear all entities
+      this.enemies.forEach(e => e.die());
+      this.bullets.forEach(b => b.die());
+      this.expGems.forEach(g => g.die());
+      this.enemies = [];
+      this.bullets = [];
+      this.expGems = [];
+      
+      this.gameContainer.removeChildren();
+      
+      // Reset logic
+      this.startNewGame();
+  }
 
   private startNewGame() {
-      // Check if we should actually reset (e.g. if it's a fresh load vs a reload)
-      // For now, let's trust the persisted store state unless it's explicitly Game Over or Level 1/0 XP
       const state = useGameStore.getState();
       const shouldReset = state.isGameOver || (state.level === 1 && state.exp === 0 && state.wave === 1);
 
@@ -131,6 +151,12 @@ export class GameEngine {
       // TODO: properly sync WeaponManager with InventoryStore on load
       this.weaponManager.weapons = [];
       this.weaponManager.addWeapon(new MagicWand(this as any)); // Default weapon
+      
+      // If platformer, ensure player starts on ground
+      if (state.currentMode === GameMode.PLATFORMER) {
+          const groundLevel = height - this.GROUND_Y_OFFSET;
+          this.player.y = groundLevel - this.player.radius;
+      }
   }
 
   private setupInput() {
@@ -152,9 +178,18 @@ export class GameEngine {
     if (!this.player || !this.player.active) return;
 
     const config = useConfigStore.getState();
+    const gameState = useGameStore.getState();
+    const mode = gameState.currentMode;
+
+    // Physics
+    if (mode === GameMode.PLATFORMER) {
+        this.applyPhysics(this.player, delta);
+        this.enemies.forEach(e => this.applyPhysics(e, delta));
+        this.expGems.forEach(g => this.applyPhysics(g, delta));
+    }
 
     // 1. Player Input & Stats
-    const level = useGameStore.getState().level;
+    const level = gameState.level;
     const speedMult = config.speedMultiplier + ((level - 1) * config.speedPerLevel);
 
     this.player.speed = config.playerSpeed * speedMult;
@@ -180,14 +215,14 @@ export class GameEngine {
     this.waveTimer += delta / 60;
     if (this.waveTimer >= this.WAVE_DURATION) {
         this.waveTimer = 0;
-        const currentWave = useGameStore.getState().wave;
-        useGameStore.getState().setStats({ wave: currentWave + 1 });
+        const currentWave = gameState.wave;
+        gameState.setStats({ wave: currentWave + 1 });
         // Wave Complete Bonus
-        useGameStore.getState().addScore(currentWave * 100);
+        gameState.addScore(currentWave * 100);
     }
 
     this.enemySpawnTimer += delta / 60; 
-    const currentWave = useGameStore.getState().wave;
+    const currentWave = gameState.wave;
     // Spawn rate decreases (gets faster) as wave increases. Min cap 0.2s
     const spawnRate = Math.max(0.2, config.enemySpawnRate - ((currentWave - 1) * 0.1));
     
@@ -210,25 +245,66 @@ export class GameEngine {
     this.screenShakeManager.update(delta);
   }
 
+  private applyPhysics(entity: Entity, delta: number) {
+      // Apply Gravity
+      entity.velocity.y += this.GRAVITY * delta;
+      
+      // Ground Collision
+      const { height } = this.app.screen;
+      const groundLevel = height - this.GROUND_Y_OFFSET;
+      
+      if (entity.y + entity.radius >= groundLevel) {
+          entity.y = groundLevel - entity.radius;
+          // Stop downward velocity, but allow upward (jump start)
+          if (entity.velocity.y > 0) {
+              entity.velocity.y = 0;
+              entity.isGrounded = true;
+          }
+      } else {
+          entity.isGrounded = false;
+      }
+  }
+
   private constrainPlayer() {
       if (!this.player) return;
       const r = this.player.radius;
       const { width, height } = this.app.screen;
+
       this.player.x = Math.max(r, Math.min(width - r, this.player.x));
-      this.player.y = Math.max(r, Math.min(height - r, this.player.y));
+      
+      const mode = useGameStore.getState().currentMode;
+      if (mode === GameMode.PLATFORMER) {
+          // In platformer, just constrain top and bottom safety
+           this.player.y = Math.max(r, this.player.y);
+           this.player.y = Math.min(height - this.GROUND_Y_OFFSET - r + 5, this.player.y);
+      } else {
+          this.player.y = Math.max(r, Math.min(height - r, this.player.y));
+      }
   }
 
   private spawnEnemy() {
       const { width, height } = this.app.screen;
-      // Spawn at edges
+      const mode = useGameStore.getState().currentMode;
+      
       let x, y;
-      if (Math.random() < 0.5) {
-          x = Math.random() < 0.5 ? -20 : width + 20;
-          y = Math.random() * height;
+      
+      if (mode === GameMode.PLATFORMER) {
+          // Spawn at edges, ground level
+          const groundY = height - this.GROUND_Y_OFFSET;
+          const spawnLeft = Math.random() < 0.5;
+          x = spawnLeft ? -30 : width + 30;
+          y = groundY - 20; // Approx logic
       } else {
-          x = Math.random() * width;
-          y = Math.random() < 0.5 ? -20 : height + 20;
+          // Top Down Spawn
+          if (Math.random() < 0.5) {
+              x = Math.random() < 0.5 ? -20 : width + 20;
+              y = Math.random() * height;
+          } else {
+              x = Math.random() * width;
+              y = Math.random() < 0.5 ? -20 : height + 20;
+          }
       }
+
       // Determine Enemy Type based on Wave
       const wave = useGameStore.getState().wave;
       let type = EnemyType.CHASER;
@@ -250,11 +326,8 @@ export class GameEngine {
       const enemy = new Enemy(x, y, type);
       
       // Scale Enemy Stats based on Wave
-      // const wave = useGameStore.getState().wave; // Already have wave above
-      // +20% HP per wave
       enemy.maxHp = enemy.maxHp * (1 + (wave - 1) * 0.2); 
       enemy.hp = enemy.maxHp;
-      // +5% Speed per wave (Applied to base speed)
       const config = useConfigStore.getState();
       enemy.speed = enemy.speed * (1 + (wave - 1) * 0.05) * config.enemySpeed; 
       
@@ -283,49 +356,7 @@ export class GameEngine {
       
       for (let i = this.enemies.length - 1; i >= 0; i--) {
           const enemy = this.enemies[i];
-          // enemy.speed = config.enemySpeed; // Removed override to allow per-enemy scaling if needed, or apply scaling here
-          // const wave = useGameStore.getState().wave;
-          // Apply wave scaling to BASE speed, not overwriting specific type speed
-          // We need a way to store base speed or just apply multiplier to current speed?
-          // If we multiply current speed, it will compound every frame! ERROR.
-          // Correct way: Enemy has baseSpeed. Update sets speed = baseSpeed * multiplier.
-          // But Enemy.ts constructor sets 'this.speed'.
-          // Let's assume 'this.speed' in Enemy is the base speed for that type.
-          
-          // Actually, in update() of Enemy, it uses this.speed.
-          // If we want dynamic config speed + wave scaling, we should do it carefully.
-          // For now, let's trust the Enemy class to handle its own speed logic or just apply a global modifier here
-          // BUT, we have different types with different speeds.
-          // Chaser = 1.5, Rusher = 1.0 (burst), Tank = 0.8
-          
-          // If we want to support the "Enemy Speed" config from GM console, it should be a multiplier, not an override.
-          // Let's assume config.enemySpeed is a multiplier (default 1).
-          // And wave scaling is another multiplier.
-          
-          // const globalSpeedMult = config.enemySpeed * (1 + (wave - 1) * 0.05);
-          
-          // We need to pass this to enemy update, or set it on enemy
-          // enemy.speedMultiplier = globalSpeedMult; // We need to add this property to Enemy or just hack it
-          
-          // Hack: we don't want to change 'speed' property permanently if it's used for logic
-          // Let's just pass delta * multiplier to update?
-          // Or better: Let Enemy class handle its speed.
-          // For now, let's NOT override speed here, because Rusher changes its speed dynamically.
-          // If we override 'enemy.speed' here, we break Rusher's burst logic.
-          
-          // SOLUTION: We need to update Enemy to accept a global speed multiplier
-          // For this MVP, let's just let them be their natural speeds + wave scaling on spawn.
-          // The GM Console "Enemy Speed" will only affect NEWLY spawned enemies if we use it in constructor, 
-          // or we need a 'timeScale' on enemy.
-          
-          // Let's skip the per-frame speed override for now to fix Rusher behavior.
-          // The wave scaling is already applied to 'maxHp' on spawn.
-          // Let's apply speed scaling on spawn too? 
-          // The previous code was overriding it every frame:
-          // enemy.speed = config.enemySpeed * ...
-          
-          // Let's remove this override to let Rusher work.
-          // If we want global speed up, we should do it in Enemy.update()
+          // enemy.speed logic handled in spawn/constructor + AI update
           
           enemy.update(delta);
           
@@ -335,10 +366,10 @@ export class GameEngine {
                   const gameState = useGameStore.getState();
                   const newHp = gameState.hp - 0.5 * delta; // Damage over time
                   if (newHp <= 0) {
-                      useGameStore.getState().setStats({ hp: 0 });
-                      useGameStore.getState().setGameOver(true);
+                      gameState.setStats({ hp: 0 });
+                      gameState.setGameOver(true);
                   } else {
-                      useGameStore.getState().setStats({ hp: newHp });
+                      gameState.setStats({ hp: newHp });
                       this.screenShakeManager.shake(2, 0.2); // Shake on damage
                   }
               }

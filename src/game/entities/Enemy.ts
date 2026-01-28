@@ -1,5 +1,6 @@
 import { Entity } from './Entity';
 import { Player } from './Player';
+import { useGameStore, GameMode } from '../../store/gameStore';
 
 export type EnemyType = 'chaser' | 'rusher' | 'tank';
 export const EnemyType = {
@@ -102,6 +103,7 @@ export class Enemy extends Entity {
     }
     
     // Rotate towards velocity if moving (especially for triangle)
+    // Only rotate if significant movement
     if (Math.abs(this.velocity.x) > 0.1 || Math.abs(this.velocity.y) > 0.1) {
         this.rotation = Math.atan2(this.velocity.y, this.velocity.x);
     }
@@ -112,60 +114,104 @@ export class Enemy extends Entity {
   private updateAI(delta: number) {
       if (!this.target) return;
 
+      const mode = useGameStore.getState().currentMode;
       const dx = this.target.x - this.x;
       const dy = this.target.y - this.y;
       const dist = Math.sqrt(dx * dx + dy * dy);
 
-      if (this.type === EnemyType.RUSHER) {
-          // Rush Logic
-          switch (this.chargeState) {
-              case 'idle':
-                  // Move slowly towards player
-                  if (dist > 0) {
-                      this.velocity.x = (dx / dist) * this.speed;
-                      this.velocity.y = (dy / dist) * this.speed;
-                  }
-                  
-                  // Trigger charge if close enough
-                  if (dist < 200) {
-                      this.chargeState = 'charging';
-                      this.chargeTimer = 0.5; // 0.5s windup (warning)
-                      this.velocity.x = 0;
-                      this.velocity.y = 0;
-                      // Visual tell: could shake or flash, for now just stop
-                  }
-                  break;
-                  
-              case 'charging':
-                  this.chargeTimer -= delta / 60;
-                  if (this.chargeTimer <= 0) {
-                      // Launch!
-                      const angle = Math.atan2(dy, dx);
-                      this.chargeDir = { x: Math.cos(angle), y: Math.sin(angle) };
-                      this.velocity.x = this.chargeDir.x * (this.speed * 6); // 6x speed burst
-                      this.velocity.y = this.chargeDir.y * (this.speed * 6);
+      if (mode === GameMode.PLATFORMER) {
+          // Platformer Logic
+          if (this.type === EnemyType.RUSHER) {
+              switch (this.chargeState) {
+                  case 'idle':
+                      // Move slowly towards player X
+                      if (Math.abs(dx) > 10) {
+                          this.velocity.x = Math.sign(dx) * this.speed;
+                      } else {
+                          this.velocity.x = 0;
+                      }
                       
-                      this.chargeState = 'cooldown';
-                      this.chargeTimer = 1.0; // Charge duration
-                  }
-                  break;
-                  
-              case 'cooldown':
-                  this.chargeTimer -= delta / 60;
-                  // Decelerate during charge
-                  this.velocity.x *= 0.95;
-                  this.velocity.y *= 0.95;
-                  
-                  if (this.chargeTimer <= 0) {
-                      this.chargeState = 'idle';
-                  }
-                  break;
+                      // Trigger charge if close enough horizontally
+                      if (Math.abs(dx) < 300 && Math.abs(dy) < 100) { 
+                          this.chargeState = 'charging';
+                          this.chargeTimer = 0.5; // 0.5s windup
+                          this.velocity.x = 0;
+                      }
+                      break;
+                      
+                  case 'charging':
+                      this.chargeTimer -= delta / 60;
+                      if (this.chargeTimer <= 0) {
+                          // Launch!
+                          this.chargeDir = { x: Math.sign(dx) || 1, y: 0 };
+                          this.velocity.x = this.chargeDir.x * (this.speed * 6);
+                          
+                          this.chargeState = 'cooldown';
+                          this.chargeTimer = 1.0; 
+                      }
+                      break;
+                      
+                  case 'cooldown':
+                      this.chargeTimer -= delta / 60;
+                      this.velocity.x *= 0.95;
+                      
+                      if (this.chargeTimer <= 0) {
+                          this.chargeState = 'idle';
+                      }
+                      break;
+              }
+          } else {
+              // Standard Chaser/Tank
+              // Move towards player X
+              if (Math.abs(dx) > 5) {
+                  this.velocity.x = Math.sign(dx) * this.speed;
+              } else {
+                  this.velocity.x = 0;
+              }
+              // Do NOT touch velocity.y, let gravity handle it
           }
       } else {
-          // Standard Tracking (Chaser & Tank)
-          if (dist > 0) {
-            this.velocity.x = (dx / dist) * this.speed;
-            this.velocity.y = (dy / dist) * this.speed;
+          // Top Down Logic (Original)
+          if (this.type === EnemyType.RUSHER) {
+              switch (this.chargeState) {
+                  case 'idle':
+                      if (dist > 0) {
+                          this.velocity.x = (dx / dist) * this.speed;
+                          this.velocity.y = (dy / dist) * this.speed;
+                      }
+                      if (dist < 200) {
+                          this.chargeState = 'charging';
+                          this.chargeTimer = 0.5; 
+                          this.velocity.x = 0;
+                          this.velocity.y = 0;
+                      }
+                      break;
+                  case 'charging':
+                      this.chargeTimer -= delta / 60;
+                      if (this.chargeTimer <= 0) {
+                          const angle = Math.atan2(dy, dx);
+                          this.chargeDir = { x: Math.cos(angle), y: Math.sin(angle) };
+                          this.velocity.x = this.chargeDir.x * (this.speed * 6); 
+                          this.velocity.y = this.chargeDir.y * (this.speed * 6);
+                          this.chargeState = 'cooldown';
+                          this.chargeTimer = 1.0;
+                      }
+                      break;
+                  case 'cooldown':
+                      this.chargeTimer -= delta / 60;
+                      this.velocity.x *= 0.95;
+                      this.velocity.y *= 0.95;
+                      if (this.chargeTimer <= 0) {
+                          this.chargeState = 'idle';
+                      }
+                      break;
+              }
+          } else {
+              // Standard Tracking
+              if (dist > 0) {
+                this.velocity.x = (dx / dist) * this.speed;
+                this.velocity.y = (dy / dist) * this.speed;
+              }
           }
       }
   }

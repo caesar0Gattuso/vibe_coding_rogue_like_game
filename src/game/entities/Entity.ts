@@ -7,6 +7,11 @@ export class Entity extends Container {
   public speed: number;
   public radius: number = 10;
   public active: boolean = true;
+  
+  // Physics properties
+  public gravity: number = 0;
+  public isGrounded: boolean = false;
+
   protected visuals: Graphics;
 
   constructor(x: number, y: number, color: number = 0xffffff) {

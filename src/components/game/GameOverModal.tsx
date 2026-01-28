@@ -5,7 +5,11 @@ import { useGameStore } from '../../store/gameStore';
 import { GlassCard } from '../ui/GlassCard';
 import { Button } from '../ui/Button';
 
-export const GameOverModal: React.FC = () => {
+interface GameOverModalProps {
+  onReturnToMenu?: () => void;
+}
+
+export const GameOverModal: React.FC<GameOverModalProps> = ({ onReturnToMenu }) => {
   const { isGameOver, resetGame, score, highScore, wave } = useGameStore();
 
   if (!isGameOver) return null;
@@ -14,8 +18,16 @@ export const GameOverModal: React.FC = () => {
 
   const handleRestart = () => {
     resetGame();
-    // Ideally we also reset the Game instance state (entities), but for now Game loop handles it via health check or we can force reload
+    // Force reload to ensure clean state
     window.location.reload(); 
+  };
+
+  const handleMainMenu = () => {
+    if (onReturnToMenu) {
+      onReturnToMenu();
+    } else {
+      window.location.reload();
+    }
   };
 
   return (
@@ -68,7 +80,7 @@ export const GameOverModal: React.FC = () => {
             <Button variant="primary" className="w-full bg-red-600 hover:bg-red-500" onClick={handleRestart}>
               <RefreshCw size={20} /> Try Again
             </Button>
-            <Button variant="ghost" className="w-full" onClick={() => window.location.reload()}>
+            <Button variant="ghost" className="w-full" onClick={handleMainMenu}>
               <Home size={20} /> Main Menu
             </Button>
           </div>
